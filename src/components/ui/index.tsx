@@ -8,10 +8,10 @@ export function CardHeader({ children, className = '' }: { children: React.React
     return <div className={`px-6 py-4 border-b border-gray-100 dark:border-gray-700 ${className}`}>{children}</div>;
 }
 export function CardTitle({ children, className = '' }: { children: React.ReactNode, className?: string }) {
-    return <h3 className={`text-lg font-bold text-gray-900 dark:text-gray-100 ${className}`}>{children}</h3>;
+    return <h3 className={`text-lg font-bold text-gray-900 dark:text-gray-100 break-words ${className}`}>{children}</h3>;
 }
 export function CardContent({ children, className = '' }: { children: React.ReactNode, className?: string }) {
-    return <div className={`p-6 ${className}`}>{children}</div>;
+    return <div className={`p-6 break-words ${className}`}>{children}</div>;
 }
 
 // Button
@@ -88,13 +88,13 @@ export function Tabs({
                     <button
                         key={tab.id}
                         onClick={() => onChange(tab.id)}
-                        className={`flex-1 flex items-center justify-center gap-2 whitespace-nowrap px-3 py-2 text-sm font-medium rounded-lg transition-all ${isActive
+                        className={`flex-1 flex items-center justify-center gap-2 min-w-0 px-3 py-2 text-sm font-medium rounded-lg transition-all flex-nowrap ${isActive
                             ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
                             }`}
                     >
-                        {tab.icon}
-                        {tab.label}
+                        {tab.icon && <span className="shrink-0">{tab.icon}</span>}
+                        <span className="truncate">{tab.label}</span>
                     </button>
                 )
             })}
