@@ -66,10 +66,10 @@ export function TableRow({ children, className = '' }: { children: React.ReactNo
     return <tr className={`border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors ${className}`}>{children}</tr>;
 }
 export function TableHead({ children, className = '' }: { children: React.ReactNode, className?: string }) {
-    return <th className={`px-4 py-3 font-medium ${className}`}>{children}</th>;
+    return <th className={`px-4 py-3 font-medium whitespace-nowrap ${className}`}>{children}</th>;
 }
 export function TableCell({ children, className = '', ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-    return <td className={`px-4 py-3 ${className}`} {...props}>{children}</td>;
+    return <td className={`px-4 py-3 whitespace-nowrap ${className}`} {...props}>{children}</td>;
 }
 
 // Tabs

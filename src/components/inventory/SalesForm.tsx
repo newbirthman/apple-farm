@@ -64,7 +64,7 @@ export default function SalesForm({ onSuccess, inventoryHook }: SalesFormProps) 
 
             <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="space-y-5 animate-fadeInUp">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">상품 분류</label>
                             <Select value={category} onChange={(e) => setCategory(e.target.value as Category)}>
@@ -86,7 +86,7 @@ export default function SalesForm({ onSuccess, inventoryHook }: SalesFormProps) 
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                                 판매 수량
