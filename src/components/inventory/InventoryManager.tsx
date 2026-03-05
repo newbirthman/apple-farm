@@ -11,6 +11,15 @@ export default function InventoryManager() {
     const inventoryHook = useInventory();
     const [activeTab, setActiveTab] = useState<string>('dashboard');
 
+    if (inventoryHook.isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 gap-4 animate-fadeInUp">
+                <span className="animate-spin w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full" />
+                <p className="text-gray-500 dark:text-gray-400 font-medium">데이터베이스에서 불러오는 중...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm mb-6 animate-fadeInUp">

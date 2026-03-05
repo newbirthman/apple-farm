@@ -16,6 +16,7 @@ export default function IncomingForm({ onSuccess, inventoryHook }: IncomingFormP
     const [category, setCategory] = useState<Category>('10kg');
     const [itemName, setItemName] = useState<string>('');
     const [quantity, setQuantity] = useState<string>('');
+    const [isSaving, setIsSaving] = useState(false);
 
     const currentCategoryItems = useMemo(() => {
         return prices.filter(p => p.category === category);
@@ -32,31 +33,38 @@ export default function IncomingForm({ onSuccess, inventoryHook }: IncomingFormP
     const numericQty = parseInt(quantity, 10) || 0;
     const totalPrice = numericQty * unitPrice;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (numericQty <= 0) return alert('수량을 1 이상 입력해주세요.');
+        setIsSaving(true);
 
-        if (formMode === '큰상자') {
-            addIncoming({
-                date: new Date().toISOString().split('T')[0],
-                type: '큰상자',
-                quantity: numericQty,
-            });
-        } else {
-            addIncoming({
-                date: new Date().toISOString().split('T')[0],
-                type: '판매대기',
-                boxType,
-                category,
-                itemName,
-                quantity: numericQty,
-                unitPrice,
-                totalPrice,
-            });
+        try {
+            if (formMode === '큰상자') {
+                await addIncoming({
+                    date: new Date().toISOString().split('T')[0],
+                    type: '큰상자',
+                    quantity: numericQty,
+                });
+            } else {
+                await addIncoming({
+                    date: new Date().toISOString().split('T')[0],
+                    type: '판매대기',
+                    boxType,
+                    category,
+                    itemName,
+                    quantity: numericQty,
+                    unitPrice,
+                    totalPrice,
+                });
+            }
+            setQuantity('');
+            if (onSuccess) onSuccess();
+        } catch (err) {
+            console.error(err);
+            alert('저장 중 오류가 발생했습니다.');
+        } finally {
+            setIsSaving(false);
         }
-
-        setQuantity('');
-        if (onSuccess) onSuccess();
     };
 
     return (
@@ -145,8 +153,8 @@ export default function IncomingForm({ onSuccess, inventoryHook }: IncomingFormP
                         </div>
                     )}
 
-                    <Button type="submit" variant="primary" className="w-full py-4 text-lg mt-2">
-                        입고 내역 저장하기
+                    <Button type="submit" variant="primary" className="w-full py-4 text-lg mt-2" disabled={isSaving}>
+                        {isSaving ? '저장 중...' : '입고 내역 저장하기'}
                     </Button>
                 </form>
             </CardContent>

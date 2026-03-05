@@ -15,6 +15,7 @@ export default function SalesForm({ onSuccess, inventoryHook }: SalesFormProps) 
     const [itemName, setItemName] = useState<string>('');
     const [quantity, setQuantity] = useState<string>('');
     const [customPrice, setCustomPrice] = useState<string>('');
+    const [isSaving, setIsSaving] = useState(false);
 
     const currentCategoryItems = useMemo(() => {
         return prices.filter(p => p.category === category);
@@ -35,23 +36,30 @@ export default function SalesForm({ onSuccess, inventoryHook }: SalesFormProps) 
     const numericQty = parseInt(quantity, 10) || 0;
     const totalPrice = numericQty * appliedPrice;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (numericQty <= 0) return alert('판매 수량을 1 이상 입력해주세요.');
         if (appliedPrice <= 0) return alert('판매 단가를 확인해주세요.');
+        setIsSaving(true);
 
-        addSales({
-            date: new Date().toISOString().split('T')[0],
-            category,
-            itemName,
-            quantity: numericQty,
-            unitPrice: appliedPrice,
-            totalPrice,
-        });
-
-        setQuantity('');
-        setCustomPrice('');
-        if (onSuccess) onSuccess();
+        try {
+            await addSales({
+                date: new Date().toISOString().split('T')[0],
+                category,
+                itemName,
+                quantity: numericQty,
+                unitPrice: appliedPrice,
+                totalPrice,
+            });
+            setQuantity('');
+            setCustomPrice('');
+            if (onSuccess) onSuccess();
+        } catch (err) {
+            console.error(err);
+            alert('저장 중 오류가 발생했습니다.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -120,8 +128,8 @@ export default function SalesForm({ onSuccess, inventoryHook }: SalesFormProps) 
                         <span className="text-2xl font-extrabold">{totalPrice.toLocaleString()} <span className="text-lg font-medium">원</span></span>
                     </div>
 
-                    <Button type="submit" variant="primary" className="w-full py-4 text-lg mt-4 bg-blue-600 hover:bg-blue-700 focus:ring-blue-600">
-                        판매 내역 저장하기
+                    <Button type="submit" variant="primary" className="w-full py-4 text-lg mt-4 bg-blue-600 hover:bg-blue-700 focus:ring-blue-600" disabled={isSaving}>
+                        {isSaving ? '저장 중...' : '판매 내역 저장하기'}
                     </Button>
                 </form>
             </CardContent>
