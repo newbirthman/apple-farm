@@ -26,6 +26,8 @@ export default function MemoForm() {
     const [content, setContent] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+    const [photoFile, setPhotoFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleAddTag = (tag: string) => {
@@ -35,6 +37,7 @@ export default function MemoForm() {
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            setPhotoFile(file);
             const url = URL.createObjectURL(file);
             setPhotoUrl(url);
         }
@@ -42,25 +45,57 @@ export default function MemoForm() {
 
     const handleRemovePhoto = () => {
         setPhotoUrl(null);
+        setPhotoFile(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!content.trim()) return;
+
+        setIsUploading(true);
+        let finalPhotoUrl = photoUrl;
+
+        // 사진이 새로 업로드된 경우 API 호춯
+        if (photoFile) {
+            const formData = new FormData();
+            formData.append('photo', photoFile);
+
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    finalPhotoUrl = data.url;
+                } else {
+                    alert('사진 서버 업로드에 실패했습니다. (R2 연동 등 확인)');
+                    setIsUploading(false);
+                    return;
+                }
+            } catch (error) {
+                console.error('Upload Error:', error);
+                alert('사진 업로드 중 네트워크 오류가 발생했습니다.');
+                setIsUploading(false);
+                return;
+            }
+        }
 
         if (editingId) {
             setMemos(memos.map(memo =>
                 memo.id === editingId
-                    ? { ...memo, weather: selectedWeather, content, photo: photoUrl }
+                    ? { ...memo, weather: selectedWeather, content, photo: finalPhotoUrl }
                     : memo
             ));
             setEditingId(null);
             setSelectedWeather('sunny');
             setContent('');
             setPhotoUrl(null);
+            setPhotoFile(null);
             if (fileInputRef.current) fileInputRef.current.value = '';
+            setIsUploading(false);
             return;
         }
 
@@ -74,14 +109,16 @@ export default function MemoForm() {
             }),
             weather: selectedWeather,
             content,
-            photo: photoUrl,
+            photo: finalPhotoUrl,
         };
 
         setMemos([newMemo, ...memos]);
         setSelectedWeather('sunny');
         setContent('');
         setPhotoUrl(null);
+        setPhotoFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
+        setIsUploading(false);
     };
 
     const handleEditStart = (memo: Memo) => {
@@ -97,6 +134,7 @@ export default function MemoForm() {
         setSelectedWeather('sunny');
         setContent('');
         setPhotoUrl(null);
+        setPhotoFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -201,10 +239,17 @@ export default function MemoForm() {
                 <div className="flex gap-3">
                     <button
                         onClick={handleSave}
-                        disabled={!content.trim()}
-                        className="flex-[3] py-4 bg-[#6c8561] hover:bg-[#5b7250] disabled:bg-[#d6cfbe] dark:disabled:bg-gray-700 text-white font-bold rounded-xl transition-all shadow-md text-lg disabled:shadow-none"
+                        disabled={!content.trim() || isUploading}
+                        className="flex-[3] py-4 bg-[#6c8561] hover:bg-[#5b7250] disabled:bg-[#d6cfbe] dark:disabled:bg-gray-700 text-white font-bold rounded-xl transition-all shadow-md text-lg disabled:shadow-none flex items-center justify-center gap-2"
                     >
-                        {editingId ? '기록 수정하기' : '기록 저장하기'}
+                        {isUploading ? (
+                            <>
+                                <span className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full inline-block" />
+                                처리 중...
+                            </>
+                        ) : (
+                            editingId ? '기록 수정하기' : '기록 저장하기'
+                        )}
                     </button>
                     {editingId && (
                         <button
