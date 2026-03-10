@@ -29,6 +29,7 @@ export default function DailyDashboard({ inventoryHook }: DailyDashboardProps) {
     // 각 품목별 재고 현황(Inventory Summary) 계산
     const inventorySummary = useMemo(() => {
         const summary: InventorySummary[] = prices.map(p => ({
+            cropType: p.cropType || '사과',
             category: p.category,
             itemName: p.itemName,
             totalIncoming: 0,

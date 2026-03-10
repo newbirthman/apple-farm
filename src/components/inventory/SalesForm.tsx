@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import type { Category } from '@/types/inventory';
 import { useInventory } from '@/hooks/useInventory';
 import { Card, CardHeader, CardTitle, CardContent, Button, Input, Select } from '@/components/ui';
@@ -9,50 +9,108 @@ interface SalesFormProps {
 }
 
 export default function SalesForm({ onSuccess, inventoryHook }: SalesFormProps) {
-    const { prices, getPrice, addSales } = inventoryHook;
+    const { prices, addSales, deliveryFee, customers, upsertCustomer } = inventoryHook;
 
-    const [category, setCategory] = useState<Category>('10kg');
-    const [itemName, setItemName] = useState<string>('');
+    // 1단계: 품목(cropType) 추출
+    const cropTypes = Array.from(new Set(prices.map(p => p.cropType || '사과')));
+    const [cropType, setCropType] = useState(cropTypes.length > 0 ? cropTypes[0] : '사과');
+
+    // 2단계: 카테고리 (중량)
+    const categoriesForCrop = useMemo(() =>
+        Array.from(new Set(prices.filter(p => (p.cropType || '사과') === cropType).map(p => p.category))),
+        [prices, cropType]
+    );
+    const [category, setCategory] = useState<Category>(categoriesForCrop[0] || '10kg');
+
+    // 3단계: 아이템명
+    const itemsInCategory = useMemo(() =>
+        prices.filter(p => (p.cropType || '사과') === cropType && p.category === category).map(p => p.itemName),
+        [prices, cropType, category]
+    );
+    const [itemName, setItemName] = useState(itemsInCategory[0] || '');
+
+    // 4단계: 포장상태
+    const [packagingStatus, setPackagingStatus] = useState<'도소매포장' | '택배포장' | '미포장' | '선택안함'>('선택안함');
+
+    // 고객 정보 (택배포장 시)
+    const [customerName, setCustomerName] = useState('');
+    const [customerPhone, setCustomerPhone] = useState('');
+    const [customerAddress, setCustomerAddress] = useState('');
+    const [showDropdown, setShowDropdown] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
     const [quantity, setQuantity] = useState<string>('');
-    const [customPrice, setCustomPrice] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
 
-    const currentCategoryItems = useMemo(() => {
-        return prices.filter(p => p.category === category);
-    }, [prices, category]);
-
-    useMemo(() => {
-        if (currentCategoryItems.length > 0 && !currentCategoryItems.find(i => i.itemName === itemName)) {
-            setItemName(currentCategoryItems[0].itemName);
-            setCustomPrice(''); // 품목 변경 시 단가 리셋
-        }
-    }, [category, currentCategoryItems, itemName]);
-
-    // 기준 단가 가져오기
-    const basePrice = getPrice(category, itemName);
-
-    // 사용자가 단가를 직접 입력했다면 그 값을, 아니면 기준 단가를 사용 (0일 경우 빈 문자열로 두어 힌트 표시)
-    const appliedPrice = customPrice !== '' ? parseInt(customPrice, 10) || 0 : basePrice;
+    // 단가 계산 (택배포장이면 + 택배비)
+    const priceRecord = prices.find(p => (p.cropType || '사과') === cropType && p.category === category && p.itemName === itemName);
+    const basePrice = priceRecord ? priceRecord.price : 0;
+    const unitPrice = packagingStatus === '택배포장' ? basePrice + deliveryFee : basePrice;
     const numericQty = parseInt(quantity, 10) || 0;
-    const totalPrice = numericQty * appliedPrice;
+    const totalPrice = numericQty * unitPrice;
+
+    // 품목 변경 → 카테고리 초기화
+    const handleCropChange = (newCrop: string) => {
+        setCropType(newCrop);
+        const cats = Array.from(new Set(prices.filter(p => (p.cropType || '사과') === newCrop).map(p => p.category)));
+        setCategory(cats[0] || '');
+        const items = prices.filter(p => (p.cropType || '사과') === newCrop && p.category === (cats[0] || '')).map(p => p.itemName);
+        setItemName(items[0] || '');
+    };
+
+    const handleCategoryChange = (cat: string) => {
+        setCategory(cat);
+        const items = prices.filter(p => (p.cropType || '사과') === cropType && p.category === cat).map(p => p.itemName);
+        setItemName(items[0] || '');
+    };
+
+    // 고객 목록 필터
+    const filteredCustomers = useMemo(() =>
+        customerName.length > 0 ? customers.filter(c => c.name.includes(customerName)) : [],
+        [customers, customerName]
+    );
+
+    // 드롭다운 바깥 클릭 시 닫기
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setShowDropdown(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (numericQty <= 0) return alert('판매 수량을 1 이상 입력해주세요.');
-        if (appliedPrice <= 0) return alert('판매 단가를 확인해주세요.');
         setIsSaving(true);
 
         try {
+            // 택배포장일 때 고객 정보 저장
+            if (packagingStatus === '택배포장' && customerName.trim() !== '') {
+                await upsertCustomer({
+                    name: customerName.trim(),
+                    phone: customerPhone.trim(),
+                    address: customerAddress.trim(),
+                });
+            }
+
             await addSales({
                 date: new Date().toISOString().split('T')[0],
+                cropType,
+                packagingStatus: packagingStatus === '선택안함' ? undefined : packagingStatus,
                 category,
                 itemName,
                 quantity: numericQty,
-                unitPrice: appliedPrice,
+                unitPrice,
                 totalPrice,
             });
+
             setQuantity('');
-            setCustomPrice('');
+            setCustomerName('');
+            setCustomerPhone('');
+            setCustomerAddress('');
             if (onSuccess) onSuccess();
         } catch (err) {
             console.error(err);
@@ -62,6 +120,8 @@ export default function SalesForm({ onSuccess, inventoryHook }: SalesFormProps) 
         }
     };
 
+    const packagingOptions = ['선택안함', '도소매포장', '택배포장', '미포장'] as const;
+
     return (
         <Card className="max-w-xl mx-auto border-blue-900/10 shadow-md">
             <CardHeader className="bg-blue-50/50 dark:bg-blue-900/20 rounded-t-xl border-b border-blue-100 dark:border-blue-900/30">
@@ -69,67 +129,129 @@ export default function SalesForm({ onSuccess, inventoryHook }: SalesFormProps) 
                     💸 상품 판매 등록
                 </CardTitle>
             </CardHeader>
-
             <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="space-y-5 animate-fadeInUp">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">상품 분류</label>
-                            <Select value={category} onChange={(e) => setCategory(e.target.value as Category)}>
-                                <option value="10kg">🍎 10kg 박스</option>
-                                <option value="5kg">🍎 5kg 박스</option>
-                                <option value="사과즙">🧃 사과즙</option>
-                            </Select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">상세 품목</label>
-                            <Select value={itemName} onChange={(e) => {
-                                setItemName(e.target.value);
-                                setCustomPrice('');
-                            }}>
-                                {currentCategoryItems.map(item => (
-                                    <option key={item.id} value={item.itemName}>{item.itemName}</option>
-                                ))}
-                            </Select>
+                    {/* 1. 품목 선택 */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">🌱 1. 품목</label>
+                        <div className="flex flex-wrap gap-2">
+                            {cropTypes.map(crop => (
+                                <button key={crop} type="button"
+                                    onClick={() => handleCropChange(crop)}
+                                    className={`px-4 py-2 rounded-full text-sm font-bold border transition-colors ${cropType === crop
+                                        ? 'bg-green-600 text-white border-green-600'
+                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                        }`}
+                                >{crop}</button>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                                판매 수량
-                            </label>
-                            <Input
-                                type="number"
-                                min="1"
-                                placeholder="0"
-                                value={quantity}
-                                onChange={e => setQuantity(e.target.value)}
-                                className="text-lg py-3"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex justify-between">
-                                <span>실제 판매 단가</span>
-                                <span className="text-xs font-normal text-gray-400">(기준: {basePrice.toLocaleString()})</span>
-                            </label>
-                            <Input
-                                type="number"
-                                placeholder={basePrice.toString()}
-                                value={customPrice}
-                                onChange={e => setCustomPrice(e.target.value)}
-                                className="text-lg py-3"
-                            />
+                    {/* 2. 중량/형태 */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">📦 2. 중량/형태</label>
+                        <div className="flex flex-wrap gap-2">
+                            {categoriesForCrop.map(cat => (
+                                <button key={cat} type="button"
+                                    onClick={() => handleCategoryChange(cat)}
+                                    className={`px-4 py-2 rounded-full text-sm font-bold border transition-colors ${category === cat
+                                        ? 'bg-green-600 text-white border-green-600'
+                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                        }`}
+                                >{cat}</button>
+                            ))}
                         </div>
                     </div>
 
+                    {/* 3. 개수/크기 */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">🍎 3. 개수/크기</label>
+                        <div className="flex flex-wrap gap-2">
+                            {itemsInCategory.map(item => (
+                                <button key={item} type="button"
+                                    onClick={() => setItemName(item)}
+                                    className={`px-4 py-2 rounded-full text-sm font-bold border transition-colors ${itemName === item
+                                        ? 'bg-orange-500 text-white border-orange-500'
+                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                        }`}
+                                >{item || '기본'}</button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 4. 포장상태 */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">📦 4. 포장상태</label>
+                        <div className="flex flex-wrap gap-2">
+                            {packagingOptions.map(status => (
+                                <button key={status} type="button"
+                                    onClick={() => setPackagingStatus(status)}
+                                    className={`px-4 py-2 rounded-full text-sm font-bold border transition-colors ${packagingStatus === status
+                                        ? 'bg-green-600 text-white border-green-600'
+                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                        }`}
+                                >{status}</button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 5. 택배 수령인 정보 (택배포장 시) */}
+                    {packagingStatus === '택배포장' && (
+                        <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-xl p-4 border border-blue-200 dark:border-blue-800/50 space-y-3">
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">🚚 5. 택배 수령인 정보 (자동저장)</label>
+                            <div className="relative" ref={dropdownRef}>
+                                <Input
+                                    placeholder="이름 (입력 시 기존 고객 검색)"
+                                    value={customerName}
+                                    onChange={e => { setCustomerName(e.target.value); setShowDropdown(true); }}
+                                    onFocus={() => setShowDropdown(true)}
+                                />
+                                {showDropdown && customerName.length > 0 && (
+                                    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                        {filteredCustomers.map(c => (
+                                            <button key={c.id} type="button"
+                                                onClick={() => {
+                                                    setCustomerName(c.name);
+                                                    setCustomerPhone(c.phone || '');
+                                                    setCustomerAddress(c.address || '');
+                                                    setShowDropdown(false);
+                                                }}
+                                                className="block w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                                            >
+                                                <span className="font-bold text-gray-800 dark:text-gray-200">{c.name}</span>
+                                                <span className="ml-2 text-xs text-gray-500">{c.phone} | {c.address}</span>
+                                            </button>
+                                        ))}
+                                        {filteredCustomers.length === 0 && (
+                                            <div className="px-4 py-3 text-sm text-gray-400">검색 결과 없음 (새 고객으로 자동 등록)</div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <Input placeholder="전화번호" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} />
+                            <Input placeholder="주소" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} />
+                        </div>
+                    )}
+
+                    {/* 수량 */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">📦 판매 수량</label>
+                        <Input type="number" min="1" placeholder="0" value={quantity} onChange={e => setQuantity(e.target.value)} className="text-lg py-3" />
+                    </div>
+
+                    {/* 예상 매출 */}
                     <div className="flex justify-between items-center p-5 bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-300 rounded-xl border border-blue-200 dark:border-blue-800/50 mt-2">
-                        <span className="font-bold">총 판매 금액</span>
+                        <div>
+                            <span className="font-bold">💰 예상 매출</span>
+                            {packagingStatus === '택배포장' && (
+                                <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(택배비 {deliveryFee.toLocaleString()}원 포함)</span>
+                            )}
+                        </div>
                         <span className="text-2xl font-extrabold">{totalPrice.toLocaleString()} <span className="text-lg font-medium">원</span></span>
                     </div>
 
                     <Button type="submit" variant="primary" className="w-full py-4 text-lg mt-4 bg-blue-600 hover:bg-blue-700 focus:ring-blue-600" disabled={isSaving}>
-                        {isSaving ? '저장 중...' : '판매 내역 저장하기'}
+                        {isSaving ? '저장 중...' : '판매 등록하기'}
                     </Button>
                 </form>
             </CardContent>

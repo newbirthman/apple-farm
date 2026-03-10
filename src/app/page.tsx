@@ -6,13 +6,14 @@ import SeasonCard from '@/components/SeasonCard';
 import WorkflowTimeline from '@/components/WorkflowTimeline';
 import MemoForm from '@/components/MemoForm';
 import InventoryManager from '@/components/inventory/InventoryManager';
+import CustomerManager from '@/components/inventory/CustomerManager';
 import { seasons, getCurrentSeason, getSeasonData } from '@/data/farmWorkflow';
 import type { SeasonId } from '@/data/farmWorkflow';
-import { Sprout, Map, BookOpen, Box, ChevronDown } from 'lucide-react';
+import { Sprout, Map, BookOpen, Box, Users, ChevronDown } from 'lucide-react';
 
 export default function Home() {
   const [currentSeason, setCurrentSeason] = useState<SeasonId>('spring');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'timeline' | 'diary' | 'inventory'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'timeline' | 'diary' | 'inventory' | 'customers'>('dashboard');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const tabs = [
@@ -20,6 +21,7 @@ export default function Home() {
     { id: 'timeline', label: '연간 워크플로우', icon: Map },
     { id: 'diary', label: '영농 일지', icon: BookOpen },
     { id: 'inventory', label: '재고/판매 관리', icon: Box },
+    { id: 'customers', label: '고객관리', icon: Users },
   ] as const;
 
   const ActiveIcon = tabs.find(t => t.id === activeTab)?.icon || Sprout;
@@ -53,8 +55,8 @@ export default function Home() {
           {isMenuOpen && (
             <>
               {/* 바깥 배경 클릭 시 모달 닫기 처리용 오버레이 */}
-              <div 
-                className="fixed inset-0 top-[calc(56px+env(safe-area-inset-top))] z-30" 
+              <div
+                className="fixed inset-0 top-[calc(56px+env(safe-area-inset-top))] z-30"
                 onClick={() => setIsMenuOpen(false)}
               ></div>
               <div className="absolute top-full left-0 right-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-xl flex flex-col z-40 animate-fadeInUp origin-top rounded-b-xl overflow-hidden pb-2">
@@ -166,6 +168,8 @@ export default function Home() {
 
             <MemoForm />
           </div>
+        ) : activeTab === 'customers' ? (
+          <CustomerManager />
         ) : (
           <InventoryManager />
         )}

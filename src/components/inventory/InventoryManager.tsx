@@ -59,7 +59,10 @@ export default function InventoryManager() {
                 {activeTab === 'prices' && (
                     <PriceListView
                         prices={inventoryHook.prices}
+                        deliveryFee={inventoryHook.deliveryFee}
+                        updateDeliveryFee={inventoryHook.updateDeliveryFee}
                         updatePrice={inventoryHook.updatePrice}
+                        deletePriceItem={inventoryHook.deletePriceItem}
                     />
                 )}
             </div>
