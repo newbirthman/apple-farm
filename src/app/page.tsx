@@ -1,31 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/Header';
 import SeasonCard from '@/components/SeasonCard';
 import WorkflowTimeline from '@/components/WorkflowTimeline';
 import MemoForm from '@/components/MemoForm';
-import InventoryManager from '@/components/inventory/InventoryManager';
+import DailyDashboard from '@/components/inventory/DailyDashboard';
+import IncomingForm from '@/components/inventory/IncomingForm';
+import SalesForm from '@/components/inventory/SalesForm';
+import PriceListView from '@/components/inventory/PriceListView';
+import ProductManager from '@/components/inventory/ProductManager';
 import CustomerManager from '@/components/inventory/CustomerManager';
+import { useInventory } from '@/hooks/useInventory';
 import { seasons, getCurrentSeason, getSeasonData } from '@/data/farmWorkflow';
 import type { SeasonId } from '@/data/farmWorkflow';
-import { Sprout, Map, BookOpen, Box, Users, ChevronDown } from 'lucide-react';
+import { Home, BookOpen, Package, DollarSign, Tag, Users } from 'lucide-react';
+import { Tabs } from '@/components/ui';
 
-export default function Home() {
+export default function MainPage() {
   const [currentSeason, setCurrentSeason] = useState<SeasonId>('spring');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'timeline' | 'diary' | 'inventory' | 'customers'>('dashboard');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const tabs = [
-    { id: 'dashboard', label: '지금 할 일', icon: Sprout },
-    { id: 'timeline', label: '연간 워크플로우', icon: Map },
-    { id: 'diary', label: '영농 일지', icon: BookOpen },
-    { id: 'inventory', label: '재고/판매 관리', icon: Box },
-    { id: 'customers', label: '고객관리', icon: Users },
-  ] as const;
-
-  const ActiveIcon = tabs.find(t => t.id === activeTab)?.icon || Sprout;
-  const activeLabel = tabs.find(t => t.id === activeTab)?.label || '지금 할 일';
+  const [activeTab, setActiveTab] = useState<string>('home');
+  const [inventorySubTab, setInventorySubTab] = useState<string>('dashboard');
+  const [productsSubTab, setProductsSubTab] = useState<string>('product');
+  const inventoryHook = useInventory();
 
   useEffect(() => {
     setCurrentSeason(getCurrentSeason());
@@ -33,66 +30,40 @@ export default function Home() {
 
   const seasonData = getSeasonData(currentSeason);
 
+  // 메인 탭 정의 (모바일 앱과 동일)
+  const mainTabs = [
+    { id: 'home', label: '🏠 홈', icon: Home },
+    { id: 'diary', label: '📖 영농일지', icon: BookOpen },
+    { id: 'inventory', label: '📦 재고관리', icon: Package },
+    { id: 'sales', label: '💵 판매관리', icon: DollarSign },
+    { id: 'products', label: '🏷️ 상품관리', icon: Tag },
+    { id: 'customers', label: '👥 고객관리', icon: Users },
+  ];
+
+  const urgencyBadge: Record<string, { bg: string; text: string; label: string }> = {
+    '높음': { bg: '#fee2e2', text: '#dc2626', label: '🔴 긴급' },
+    '보통': { bg: '#fef9c3', text: '#ca8a04', label: '🟡 보통' },
+    '낮음': { bg: '#dcfce7', text: '#16a34a', label: '🟢 여유' },
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300 pb-20">
       <Header currentSeason={currentSeason} />
 
-      {/* 탭 네비게이션 (모바일/공용 드롭다운 확장 메뉴) */}
-      <div className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 relative">
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="w-full flex items-center justify-between px-2 py-4 text-base font-semibold text-gray-900 dark:text-gray-100 min-h-[56px] focus:outline-none"
-          >
-            <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
-              <ActiveIcon className="w-5 h-5" />
-              <span>{activeLabel}</span>
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        {/* ═══════ 홈 화면 ═══════ */}
+        {activeTab === 'home' && (
+          <div className="animate-fadeInUp">
+            {/* 환영 인사 */}
+            <div className="mb-5">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">안녕하세요 사장님! 👋</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">오늘도 보람찬 하루 되세요.</p>
             </div>
-            <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
 
-          {/* 확장 메뉴 리스트 */}
-          {isMenuOpen && (
-            <>
-              {/* 바깥 배경 클릭 시 모달 닫기 처리용 오버레이 */}
-              <div
-                className="fixed inset-0 top-[calc(56px+env(safe-area-inset-top))] z-30"
-                onClick={() => setIsMenuOpen(false)}
-              ></div>
-              <div className="absolute top-full left-0 right-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-xl flex flex-col z-40 animate-fadeInUp origin-top rounded-b-xl overflow-hidden pb-2">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        setActiveTab(tab.id as typeof activeTab);
-                        setIsMenuOpen(false);
-                      }}
-                      className={`flex items-center gap-3 px-6 py-4 text-base font-medium transition-colors text-left ${isActive
-                        ? 'bg-green-50/50 dark:bg-green-900/10 text-green-700 dark:text-green-400 border-l-4 border-green-600'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 border-l-4 border-transparent'
-                        }`}
-                    >
-                      <Icon className={`w-5 h-5 ${isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`} />
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      <main className="max-w-4xl mx-auto px-4 py-6 pb-20">
-        {activeTab === 'dashboard' ? (
-          <div>
-            {/* 시즌 안내 배너 */}
+            {/* 시즌 가이드 배너 */}
             <div className={`${seasonData.bgColor} dark:bg-opacity-20 ${seasonData.borderColor} border-2 rounded-2xl p-5 mb-6`}>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-3xl">{seasonData.emoji}</span>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-4xl">{seasonData.emoji}</span>
                 <div>
                   <h2 className={`text-xl font-bold ${seasonData.textColor}`}>
                     {seasonData.name} 시즌 작업 가이드
@@ -102,24 +73,26 @@ export default function Home() {
                   </p>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-4">
-              {seasonData.tasks.map((task, index) => (
-                <SeasonCard
-                  key={task.id}
-                  task={task}
-                  seasonColor={seasonData.color}
-                  index={index}
-                />
-              ))}
+              <div className="space-y-3 border-t border-gray-200/50 dark:border-gray-700/50 pt-4">
+                {seasonData.tasks.map((task) => {
+                  const urgency = urgencyBadge[task.urgency];
+                  return (
+                    <div key={task.id} className="bg-white/70 dark:bg-gray-800/50 rounded-xl p-3 border border-gray-200/50 dark:border-gray-700/50">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-gray-800 dark:text-gray-200 text-sm">{task.title}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold`} style={{ backgroundColor: urgency.bg, color: urgency.text }}>{urgency.label}</span>
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">📅 {task.period}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* 다음 시즌 미리보기 */}
-            <div className="mt-8 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
-              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-3">
-                📋 다음 시즌 미리보기
-              </h3>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-3">📋 다음 시즌 미리보기</h3>
               {(() => {
                 const seasonOrder: SeasonId[] = ['spring', 'summer', 'autumn', 'winter'];
                 const nextIdx = (seasonOrder.indexOf(currentSeason) + 1) % 4;
@@ -142,42 +115,135 @@ export default function Home() {
               })()}
             </div>
           </div>
-        ) : activeTab === 'timeline' ? (
-          <div>
+        )}
+
+        {/* ═══════ 영농일지 ═══════ */}
+        {activeTab === 'diary' && (
+          <div className="animate-fadeInUp">
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm mb-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
-                🗓️ 사과 재배 연간 워크플로우
-              </h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                4계절 전체 일정을 확인하고, 각 작업을 클릭하면 상세 정보를 볼 수 있습니다.
-              </p>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">🖋️ 하루 작업 기록</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">오늘 농장에서 진행한 주요 작업을 간편하게 기록하고 관리해 보세요.</p>
             </div>
-
-            <WorkflowTimeline seasons={seasons} currentSeason={currentSeason} />
-          </div>
-        ) : activeTab === 'diary' ? (
-          <div>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm mb-6 animate-fadeInUp">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
-                🖋️ 하루 작업 기록
-              </h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                오늘 농장에서 진행한 주요 작업을 간편하게 기록하고 관리해 보세요.
-              </p>
-            </div>
-
             <MemoForm />
           </div>
-        ) : activeTab === 'customers' ? (
-          <CustomerManager />
-        ) : (
-          <InventoryManager />
+        )}
+
+        {/* ═══════ 재고관리 (대시보드 + 입고등록 서브탭) ═══════ */}
+        {activeTab === 'inventory' && (
+          <div className="animate-fadeInUp">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm mb-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">📦 재고 관리</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">품목별 재고 현황과 입고를 관리합니다.</p>
+            </div>
+            <Tabs
+              tabs={[
+                { id: 'dashboard', label: '📊 대시보드' },
+                { id: 'incoming', label: '📥 입고 등록' },
+              ]}
+              activeTab={inventorySubTab}
+              onChange={setInventorySubTab}
+            />
+            <div className="mt-4">
+              {inventoryHook.isLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                  <span className="animate-spin w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full" />
+                  <p className="text-gray-500 dark:text-gray-400 font-medium">데이터 로딩 중...</p>
+                </div>
+              ) : (
+                <>
+                  {inventorySubTab === 'dashboard' && <DailyDashboard inventoryHook={inventoryHook} />}
+                  {inventorySubTab === 'incoming' && <IncomingForm inventoryHook={inventoryHook} onSuccess={() => setInventorySubTab('dashboard')} />}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════ 판매관리 ═══════ */}
+        {activeTab === 'sales' && (
+          <div className="animate-fadeInUp">
+            {inventoryHook.isLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <span className="animate-spin w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full" />
+                <p className="text-gray-500 dark:text-gray-400 font-medium">데이터 로딩 중...</p>
+              </div>
+            ) : (
+              <SalesForm inventoryHook={inventoryHook} onSuccess={() => setActiveTab('inventory')} />
+            )}
+          </div>
+        )}
+
+        {/* ═══════ 상품관리 (상품등록 + 단가표 서브탭) ═══════ */}
+        {activeTab === 'products' && (
+          <div className="animate-fadeInUp">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm mb-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">🏷️ 상품 관리</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">상품 등록 및 단가를 관리합니다.</p>
+            </div>
+            <Tabs
+              tabs={[
+                { id: 'product', label: '📝 상품 등록' },
+                { id: 'prices', label: '💰 단가표' },
+              ]}
+              activeTab={productsSubTab}
+              onChange={setProductsSubTab}
+            />
+            <div className="mt-4">
+              {inventoryHook.isLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                  <span className="animate-spin w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full" />
+                  <p className="text-gray-500 dark:text-gray-400 font-medium">데이터 로딩 중...</p>
+                </div>
+              ) : (
+                <>
+                  {productsSubTab === 'product' && <ProductManager inventoryHook={inventoryHook} onSuccess={() => setProductsSubTab('prices')} />}
+                  {productsSubTab === 'prices' && (
+                    <PriceListView
+                      prices={inventoryHook.prices}
+                      deliveryFee={inventoryHook.deliveryFee}
+                      updateDeliveryFee={inventoryHook.updateDeliveryFee}
+                      updatePrice={inventoryHook.updatePrice}
+                      deletePriceItem={inventoryHook.deletePriceItem}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════ 고객관리 ═══════ */}
+        {activeTab === 'customers' && (
+          <div className="animate-fadeInUp">
+            <CustomerManager />
+          </div>
         )}
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 text-center py-3 text-sm text-gray-500 dark:text-gray-400 z-20">
-        🍎 스마트 사과 영농일지 · 성공적인 사과 재배의 시작
-      </footer>
+      {/* ═══════ 하단 고정 탭바 (모바일 앱과 동일) ═══════ */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 z-50">
+        <div className="max-w-4xl mx-auto flex">
+          {mainTabs.map(tab => {
+            const isActive = activeTab === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 transition-colors ${isActive
+                    ? 'text-green-700 dark:text-green-400'
+                    : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                  }`}
+              >
+                <Icon className={`w-5 h-5 ${isActive ? 'text-green-600 dark:text-green-400' : ''}`} />
+                <span className={`text-[10px] font-medium ${isActive ? 'font-bold' : ''}`}>
+                  {tab.label.replace(/^[^\s]+\s/, '')}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
