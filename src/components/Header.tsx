@@ -34,7 +34,7 @@ export default function Header({ currentSeason }: { currentSeason: string }) {
                         </div>
                         <div className="flex-1">
                             <h1 className="text-xl sm:text-2xl font-bold tracking-tight leading-tight">
-                                스마트 사과 영농일지
+                                스마트 영농일지
                             </h1>
                             <p className="hidden sm:block text-green-100 dark:text-gray-400 text-sm mt-0.5">
                                 시기별 작업을 한눈에 관리하세요

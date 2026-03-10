@@ -3,12 +3,12 @@ import "./globals.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 export const metadata: Metadata = {
-  title: "스마트 사과 영농일지 | 시기별 작업 관리",
-  description: "사과 농장주를 위한 계절별 재배 워크플로우 관리 웹앱. 정지 전정, 적화, 방제, 수확까지 한눈에 관리하세요.",
-  keywords: "사과 재배, 영농일지, 농업 관리, 과수원, 사과 농장",
+  title: "스마트 영농일지 | 효율적인 농장 관리",
+  description: "농장주를 위한 스마트 영농일지. 시기별 재배 워크플로우부터 재고, 판매까지 한눈에 관리하세요.",
+  keywords: "영농일지, 농업 관리, 과수원, 스마트 팜",
   openGraph: {
-    title: "스마트 사과 영농일지",
-    description: "시기별 사과 재배 작업을 한눈에 관리하세요",
+    title: "스마트 영농일지",
+    description: "효율적인 농장 관리를 위한 스마트 영농일지",
     type: "website",
   },
 };
