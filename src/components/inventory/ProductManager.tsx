@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useInventory } from '@/hooks/useInventory';
 import { Card, CardHeader, CardTitle, CardContent, Button, Input } from '@/components/ui';
 
-const WEIGHT_UNITS = ['Kg', 'g', '박스', '상자', '망', '단', '개'];
-const ITEM_UNITS = ['과', '개', '크기', '박스', '상자', '망', '단', '봉지', '특대', '대', '중', '소', '미포장상자', '기본'];
+const WEIGHT_UNITS = ['Kg', 'g', '망', '단', '개'];
+const ITEM_UNITS = ['과', '개', '단(묶음)'];
 
 interface ProductManagerProps {
     inventoryHook: ReturnType<typeof useInventory>;
@@ -41,18 +41,21 @@ export default function ProductManager({ inventoryHook, onSuccess }: ProductMana
                 price: finalPrice
             });
             alert('새로운 상품이 단가표에 등록되었습니다.');
+            // 품목(cropType)은 유지, 나머지만 초기화
             setWeightValue(10);
             setWeightUnit('Kg');
             setItemValue(20);
             setItemUnit('과');
             setPrice('');
-            if (onSuccess) onSuccess();
+            // 탭 이동 안 함 (onSuccess 호출 안 함)
         } catch (err: any) {
             alert('오류: ' + err.message);
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    const stepperBtnClass = "px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600";
 
     return (
         <Card className="max-w-xl mx-auto">
@@ -78,14 +81,16 @@ export default function ProductManager({ inventoryHook, onSuccess }: ProductMana
                             2. 분류/중량: <span className="text-green-600 dark:text-green-400">{weightValue > 0 ? `${weightValue}${weightUnit}` : weightUnit}</span>
                         </label>
                         <div className="flex items-center gap-2 mb-3">
-                            <button type="button" onClick={() => adjustWeight(-10)} className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">-10</button>
-                            <button type="button" onClick={() => adjustWeight(-1)} className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">-1</button>
+                            <button type="button" onClick={() => adjustWeight(-10)} className={stepperBtnClass}>-10</button>
+                            <button type="button" onClick={() => adjustWeight(-5)} className={stepperBtnClass}>-5</button>
+                            <button type="button" onClick={() => adjustWeight(-1)} className={stepperBtnClass}>-1</button>
                             <Input
                                 type="number" value={weightValue} onChange={e => setWeightValue(Math.max(0, parseInt(e.target.value) || 0))}
                                 className="flex-1 text-center text-lg font-bold py-2"
                             />
-                            <button type="button" onClick={() => adjustWeight(1)} className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">+1</button>
-                            <button type="button" onClick={() => adjustWeight(10)} className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">+10</button>
+                            <button type="button" onClick={() => adjustWeight(1)} className={stepperBtnClass}>+1</button>
+                            <button type="button" onClick={() => adjustWeight(5)} className={stepperBtnClass}>+5</button>
+                            <button type="button" onClick={() => adjustWeight(10)} className={stepperBtnClass}>+10</button>
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {WEIGHT_UNITS.map(unit => (
@@ -107,14 +112,16 @@ export default function ProductManager({ inventoryHook, onSuccess }: ProductMana
                             3. 수량(개수): <span className="text-orange-500">{itemValue > 0 ? `${itemValue}${itemUnit}` : itemUnit}</span>
                         </label>
                         <div className="flex items-center gap-2 mb-3">
-                            <button type="button" onClick={() => adjustItem(-10)} className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">-10</button>
-                            <button type="button" onClick={() => adjustItem(-1)} className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">-1</button>
+                            <button type="button" onClick={() => adjustItem(-10)} className={stepperBtnClass}>-10</button>
+                            <button type="button" onClick={() => adjustItem(-5)} className={stepperBtnClass}>-5</button>
+                            <button type="button" onClick={() => adjustItem(-1)} className={stepperBtnClass}>-1</button>
                             <Input
                                 type="number" value={itemValue} onChange={e => setItemValue(Math.max(0, parseInt(e.target.value) || 0))}
                                 className="flex-1 text-center text-lg font-bold py-2"
                             />
-                            <button type="button" onClick={() => adjustItem(1)} className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">+1</button>
-                            <button type="button" onClick={() => adjustItem(10)} className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">+10</button>
+                            <button type="button" onClick={() => adjustItem(1)} className={stepperBtnClass}>+1</button>
+                            <button type="button" onClick={() => adjustItem(5)} className={stepperBtnClass}>+5</button>
+                            <button type="button" onClick={() => adjustItem(10)} className={stepperBtnClass}>+10</button>
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {ITEM_UNITS.map(unit => (

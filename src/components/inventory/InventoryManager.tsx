@@ -60,7 +60,9 @@ export default function InventoryManager() {
                     <PriceListView
                         prices={inventoryHook.prices}
                         deliveryFee={inventoryHook.deliveryFee}
+                        deliveryFeeIsland={inventoryHook.deliveryFeeIsland}
                         updateDeliveryFee={inventoryHook.updateDeliveryFee}
+                        updateDeliveryFeeIsland={inventoryHook.updateDeliveryFeeIsland}
                         updatePrice={inventoryHook.updatePrice}
                         deletePriceItem={inventoryHook.deletePriceItem}
                     />

@@ -62,6 +62,7 @@ export function useInventory() {
     const [incoming, setIncoming] = useState<IncomingRecord[]>([]);
     const [sales, setSales] = useState<SalesRecord[]>([]);
     const [deliveryFee, setDeliveryFee] = useState<number>(0);
+    const [deliveryFeeIsland, setDeliveryFeeIsland] = useState<number>(0);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -112,13 +113,15 @@ export function useInventory() {
                 setSales((salesRows || []).map(mapSalesRow));
 
                 // 4) 앱 글로벌 설정 로드 (택배비)
-                const { data: settingsData } = await supabase
+                const { data: settingsRows } = await supabase
                     .from('app_settings')
                     .select('*')
-                    .eq('key', 'delivery_fee')
-                    .single();
-                if (settingsData && settingsData.value) {
-                    setDeliveryFee(parseInt(settingsData.value, 10) || 0);
+                    .in('key', ['delivery_fee', 'delivery_fee_island']);
+                if (settingsRows) {
+                    for (const row of settingsRows) {
+                        if (row.key === 'delivery_fee') setDeliveryFee(parseInt(row.value, 10) || 0);
+                        if (row.key === 'delivery_fee_island') setDeliveryFeeIsland(parseInt(row.value, 10) || 0);
+                    }
                 }
 
                 // 5) 고객 명단 로드
@@ -237,9 +240,16 @@ export function useInventory() {
         if (error) console.error('택배비 수정 오류:', error);
     }, []);
 
+    // ─── 도서산간 택배비 업데이트 ───
+    const updateDeliveryFeeIsland = useCallback(async (fee: number) => {
+        setDeliveryFeeIsland(fee);
+        const { error } = await supabase.from('app_settings').upsert({ key: 'delivery_fee_island', value: fee.toString() });
+        if (error) console.error('도서산간 택배비 수정 오류:', error);
+    }, []);
+
     return {
-        prices, incoming, sales, deliveryFee, customers, isLoading,
+        prices, incoming, sales, deliveryFee, deliveryFeeIsland, customers, isLoading,
         updatePrice, getPrice, addIncoming, addSales, addPriceItem, deletePriceItem,
-        upsertCustomer, deleteCustomer, updateDeliveryFee,
+        upsertCustomer, deleteCustomer, updateDeliveryFee, updateDeliveryFeeIsland,
     };
 }

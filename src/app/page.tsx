@@ -196,12 +196,14 @@ export default function MainPage() {
                 </div>
               ) : (
                 <>
-                  {productsSubTab === 'product' && <ProductManager inventoryHook={inventoryHook} onSuccess={() => setProductsSubTab('prices')} />}
+                  {productsSubTab === 'product' && <ProductManager inventoryHook={inventoryHook} />}
                   {productsSubTab === 'prices' && (
                     <PriceListView
                       prices={inventoryHook.prices}
                       deliveryFee={inventoryHook.deliveryFee}
+                      deliveryFeeIsland={inventoryHook.deliveryFeeIsland}
                       updateDeliveryFee={inventoryHook.updateDeliveryFee}
+                      updateDeliveryFeeIsland={inventoryHook.updateDeliveryFeeIsland}
                       updatePrice={inventoryHook.updatePrice}
                       deletePriceItem={inventoryHook.deletePriceItem}
                     />
@@ -231,8 +233,8 @@ export default function MainPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 transition-colors ${isActive
-                    ? 'text-green-700 dark:text-green-400'
-                    : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                  ? 'text-green-700 dark:text-green-400'
+                  : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
                   }`}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'text-green-600 dark:text-green-400' : ''}`} />
